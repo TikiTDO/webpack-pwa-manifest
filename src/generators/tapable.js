@@ -17,6 +17,22 @@ function getBeforeProcessingHook(compilation) {
 
 module.exports = function (that, { hooks: { compilation: comp, emit } }) {
   comp.tap('webpack-pwa-manifest', (compilation) => {
+    compilation.hooks.processAssets.tapAsync(
+      {
+        name: 'webpack-pwa-manifest',
+        stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
+        additionalAssets: true,
+      }, function (_assets, callback) {
+        if (that.htmlPlugin) {
+          injectResources(compilation, that.assets, callback)
+        } else {
+          buildResources(that, that.options.publicPath || compilation.options.output.publicPath, () => {
+            injectResources(compilation, that.assets, callback)
+          })
+        }
+    });
+
+
     const beforeProcessingHook = getBeforeProcessingHook(compilation);
     if (!beforeProcessingHook) return;
     beforeProcessingHook.tapAsync('webpack-pwa-manifest', function(htmlPluginData, callback) {
@@ -39,14 +55,5 @@ module.exports = function (that, { hooks: { compilation: comp, emit } }) {
         callback(null, htmlPluginData)
       })
     })
-  })
-  emit.tapAsync('webpack-pwa-manifest', (compilation, callback) => {
-    if (that.htmlPlugin) {
-      injectResources(compilation, that.assets, callback)
-    } else {
-      buildResources(that, that.options.publicPath || compilation.options.output.publicPath, () => {
-        injectResources(compilation, that.assets, callback)
-      })
-    }
   })
 }
